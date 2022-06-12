@@ -10,14 +10,14 @@
 
 		var types: Object = {
 			direct: 0,
-			simpleScale : 1,
+			simpleScale: 1,
 			drag: 2,
 			scale: 3,
 			rotate: 4,
 			polygon: 5
 
 		}
-		var renderMode: int = types.drag;
+		var renderMode: int = types.polygon;
 
 		///var bobX = mc.bob.x;
 		//var bobY = mc.bob.y;
@@ -36,8 +36,8 @@
 		var rot = 0 * Math.PI / 180;
 		var bd: BitmapData = new BitmapData(stage.stageWidth, stage.stageHeight, false);
 		var mc: Bitmap = new Bitmap(bd);
-		var texW:Number = 0;
-		var texH:Number = 0;
+		var texW: Number = 0;
+		var texH: Number = 0;
 		var mouseIsDown = false;
 		var bitmap = false;
 
@@ -49,27 +49,27 @@
 			texH = monaBd.height;
 
 			Multitouch.inputMode = MultitouchInputMode.GESTURE;
-			
+
 			if (renderMode == types.direct) {
 				directIMG(0, 0);
 			}
-			if(renderMode == types.simpleScale){
+			if (renderMode == types.simpleScale) {
 				directIMGSimpleScale(0, 0, w, h);
 			}
-			
+
 			if (renderMode == types.drag) {
 				stage.addEventListener(Event.ENTER_FRAME, update);
 				stage.addEventListener(MouseEvent.MOUSE_DOWN, onDown);
 				stage.addEventListener(MouseEvent.MOUSE_UP, onUp);
 				directIMGSimpleScale(0, 0, w, h);
-			} 
+			}
 			if (renderMode == types.scale) {
 				stage.addEventListener(Event.ENTER_FRAME, update);
 				stage.addEventListener(MouseEvent.MOUSE_DOWN, onDown);
 				stage.addEventListener(MouseEvent.MOUSE_UP, onUp);
 				stage.addEventListener(TransformGestureEvent.GESTURE_ZOOM, scaleObj);
 				scaleIMG(0, 0, scale);
-			} 
+			}
 			if (renderMode == types.rotate || renderMode == types.polygon) {
 				stage.addEventListener(Event.ENTER_FRAME, update);
 				stage.addEventListener(MouseEvent.MOUSE_DOWN, onDown);
@@ -106,8 +106,8 @@
 			}
 			bd.unlock();
 		}
-	
-		function directIMGSimpleScale(_x: int, _y: int, _w: Number, _h:Number): void {
+
+		function directIMGSimpleScale(_x: int, _y: int, _w: Number, _h: Number): void {
 			bd.lock();
 			bd.fillRect(new Rectangle(0, 0, stage.stageWidth, stage.stageHeight), 0x000000);
 
@@ -134,7 +134,7 @@
 			}
 			bd.unlock();
 		}
-	
+
 		//allows scaling at mouse point using offset
 		function scaleIMG(_x: int, _y: int, _scale: Number): void {
 			var _h = h * _scale;
@@ -164,6 +164,19 @@
 
 			}
 			bd.unlock();
+		}
+
+
+		/////////////////---ROTATION---///////////////////
+
+		//we are going to set the image dimentions with not transformations and only then rotate it
+		function rotateIMG(_x: Number, _y: Number, _offsetX: Number, _offsetY: Number, _scale: Number, _rot: Number): void {
+
+			if (renderMode == types.rotate) {
+				rotateIMGSimple(_x, _y, _offsetX, _offsetY, _scale, _rot)
+			} else {
+				rotateImgScanLines(_x, _y, _offsetX, _offsetY, _scale, _rot);
+			}
 		}
 
 
@@ -377,112 +390,10 @@
 			bd.fillRect(new Rectangle(0, 0, stage.stageWidth, stage.stageHeight), 0x000000);
 			sortPoints(triangle1);
 			fillTriangle(triangle1);
-			
+
 			sortPoints(triangle2);
 			fillTriangle(triangle2);
 			bd.unlock();
-		}
-
-		//we are going to set the image dimentions with not transformations and only then rotate it
-		function rotateIMG(_x: Number, _y: Number, _offsetX: Number, _offsetY: Number, _scale: Number, _rot: Number): void {
-
-			if (renderMode == types.rotate) {
-				rotateIMGSimple(_x, _y, _offsetX, _offsetY, _scale, _rot)
-			} else {
-				rotateImgScanLines(_x, _y, _offsetX, _offsetY, _scale, _rot);
-			}
-		}
-
-
-		
-
-		function onDown(e: MouseEvent): void {
-			mouseIsDown = true;
-			if (renderMode == types.drag) {
-				offsetX = (stage.mouseX - prevX);
-				offsetY = (stage.mouseY - prevY);
-			}
-			if (renderMode == types.scale) {
-				offsetX = (stage.mouseX - prevX) / scale;
-				offsetY = (stage.mouseY - prevY) / scale;
-			}
-			if (renderMode == types.rotate || renderMode == types.polygon) {
-				setOffsetWithInverseRotation(stage.mouseX, stage.mouseY);
-			}
-		}
-
-		function onUp(e: MouseEvent): void {
-			mouseIsDown = false;
-		}
-
-		function update(e: Event): void {
-
-			if (mouseIsDown) {
-				if (renderMode == types.drag) {
-					directIMGSimpleScale(stage.mouseX - offsetX, stage.mouseY - offsetY, w, h);
-					prevX = stage.mouseX - offsetX;
-					prevY = stage.mouseY - offsetY;
-				}
-				if (renderMode == types.scale) {
-					scaleIMG(stage.mouseX - (offsetX * scale), stage.mouseY - (offsetY * scale), scale);
-					prevX = stage.mouseX - (offsetX * scale);
-					prevY = stage.mouseY - (offsetY * scale);
-				}
-				if (renderMode == types.rotate || renderMode == types.polygon) {
-					rotateIMG(stage.mouseX - (offsetX * scale), stage.mouseY - (offsetY * scale), offsetX, offsetY, scale, rot);
-				}
-			}
-		}
-
-
-
-		function rotObj(e: TransformGestureEvent): void {
-			trace("rotate!", e.rotation);
-			setOffsetWithInverseRotation(stage.mouseX, stage.mouseY);
-			rot += e.rotation / 50;
-			rotateIMG(stage.mouseX - offsetX * scale, stage.mouseY - offsetY * scale, offsetX, offsetY, scale, rot);
-
-		}
-
-
-		function scaleObj(e: TransformGestureEvent): void {
-			trace("scale");
-			if (renderMode == types.scale) {
-				offsetX = (stage.mouseX - prevX) / scale;
-				offsetY = (stage.mouseY - prevY) / scale;
-			} else if (renderMode == types.rotate || renderMode == types.polygon) {
-				setOffsetWithInverseRotation(stage.mouseX, stage.mouseY);
-			}
-
-			scale *= e.scaleX;
-
-			if (renderMode == types.scale) {
-				scaleIMG(stage.mouseX - offsetX * scale, stage.mouseY - offsetY * scale, scale);
-				prevX = stage.mouseX - offsetX * scale;
-				prevY = stage.mouseY - offsetY * scale;
-			} else if (renderMode == types.rotate || renderMode == types.polygon) {
-				rotateIMG(stage.mouseX - offsetX * scale, stage.mouseY - offsetY * scale, offsetX, offsetY, scale, rot);
-			}
-
-			/*
-			if (bitmap) {
-				
-			this is for working with a bitmap that you can scale
-		
-				mc.scaleX = mc.scaleY = scale;
-				mc.x = stage.mouseX - offsetX * scale;
-				mc.y = stage.mouseY - offsetY * scale;
-			} else {
-				//this is for actuall drawing pixels!
-				
-			}*/
-
-		}
-
-		function panObj(e: TransformGestureEvent): void {
-			trace("pan");
-			//sq.x += e.offsetX * 2;
-			//sq.y += e.offsetY * 2;
 		}
 
 		/////////----triangle rasterising-----//////
@@ -508,9 +419,7 @@
 			}
 		}
 
-		function fillTriangle(points:Array): void {
-			
-			
+		function fillTriangle(points: Array): void {
 
 			var p0x: Number = points[0].x;
 			var p0y: Number = points[0].y;
@@ -609,7 +518,7 @@
 						var v: Number = startV * texH;
 						//this is the increment step on the v axis
 						var vstep: Number = ((endV - startV) / triangleCurrWidth) * texH;
-						
+
 						for (var j: int = 0; j <= triangleCurrWidth; j++) {
 							var _x: int = startX + j;
 
@@ -698,8 +607,8 @@
 						var v: Number = startV * texH;
 						//this is the increment on the v axis
 						var vstep: Number = ((endV - startV) / triangleCurrWidth) * texH;
-						
-						
+
+
 						for (var j: int = 0; j <= triangleCurrWidth; j++) {
 							var _x: int = j + startX;
 							u += ustep;
@@ -712,8 +621,104 @@
 				}
 
 			}
-			
+
 		}
+
+
+		///////////////////CONTROLS/////////////////////
+
+
+
+		function onDown(e: MouseEvent): void {
+			mouseIsDown = true;
+			if (renderMode == types.drag) {
+				offsetX = (stage.mouseX - prevX);
+				offsetY = (stage.mouseY - prevY);
+			}
+			if (renderMode == types.scale) {
+				offsetX = (stage.mouseX - prevX) / scale;
+				offsetY = (stage.mouseY - prevY) / scale;
+			}
+			if (renderMode == types.rotate || renderMode == types.polygon) {
+				setOffsetWithInverseRotation(stage.mouseX, stage.mouseY);
+			}
+		}
+
+		function onUp(e: MouseEvent): void {
+			mouseIsDown = false;
+		}
+
+		function update(e: Event): void {
+
+			if (mouseIsDown) {
+				if (renderMode == types.drag) {
+					directIMGSimpleScale(stage.mouseX - offsetX, stage.mouseY - offsetY, w, h);
+					prevX = stage.mouseX - offsetX;
+					prevY = stage.mouseY - offsetY;
+				}
+				if (renderMode == types.scale) {
+					scaleIMG(stage.mouseX - (offsetX * scale), stage.mouseY - (offsetY * scale), scale);
+					prevX = stage.mouseX - (offsetX * scale);
+					prevY = stage.mouseY - (offsetY * scale);
+				}
+				if (renderMode == types.rotate || renderMode == types.polygon) {
+					rotateIMG(stage.mouseX - (offsetX * scale), stage.mouseY - (offsetY * scale), offsetX, offsetY, scale, rot);
+				}
+			}
+		}
+
+
+
+		function rotObj(e: TransformGestureEvent): void {
+			trace("rotate!", e.rotation);
+			setOffsetWithInverseRotation(stage.mouseX, stage.mouseY);
+			rot += e.rotation / 50;
+			rotateIMG(stage.mouseX - offsetX * scale, stage.mouseY - offsetY * scale, offsetX, offsetY, scale, rot);
+
+		}
+
+
+		function scaleObj(e: TransformGestureEvent): void {
+			trace("scale");
+			if (renderMode == types.scale) {
+				offsetX = (stage.mouseX - prevX) / scale;
+				offsetY = (stage.mouseY - prevY) / scale;
+			} else if (renderMode == types.rotate || renderMode == types.polygon) {
+				setOffsetWithInverseRotation(stage.mouseX, stage.mouseY);
+			}
+
+			scale *= e.scaleX;
+
+			if (renderMode == types.scale) {
+				scaleIMG(stage.mouseX - offsetX * scale, stage.mouseY - offsetY * scale, scale);
+				prevX = stage.mouseX - offsetX * scale;
+				prevY = stage.mouseY - offsetY * scale;
+			} else if (renderMode == types.rotate || renderMode == types.polygon) {
+				rotateIMG(stage.mouseX - offsetX * scale, stage.mouseY - offsetY * scale, offsetX, offsetY, scale, rot);
+			}
+
+			/*
+			if (bitmap) {
+				
+			this is for working with a bitmap that you can scale
+		
+				mc.scaleX = mc.scaleY = scale;
+				mc.x = stage.mouseX - offsetX * scale;
+				mc.y = stage.mouseY - offsetY * scale;
+			} else {
+				//this is for actuall drawing pixels!
+				
+			}*/
+
+		}
+
+		function panObj(e: TransformGestureEvent): void {
+			trace("pan");
+			//sq.x += e.offsetX * 2;
+			//sq.y += e.offsetY * 2;
+		}
+
+
 
 	}
 
