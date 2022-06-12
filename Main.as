@@ -7,17 +7,26 @@
 
 
 	public class Main extends MovieClip {
-
+		var k:KeyboardCtrl;
 		var types: Object = {
-			direct: 0,
-			simpleScale: 1,
-			drag: 2,
-			scale: 3,
-			rotate: 4,
-			polygon: 5
+			direct: 1,
+			simpleScale: 2,
+			drag: 3,
+			scale: 4,
+			rotate: 5,
+			polygon: 6
 
 		}
-		var renderMode: int = types.polygon;
+		var texts = [
+			"Direct\njust display image src", 
+			"Simple Scale\nset an img target rect", 
+			"Drag\nbe able to pan the image around, sticking to mouse cursor", 
+			"Scale\nscale image, using mouse pos as pivot point", 
+			"Rotate\nrotate image, using mouse pos as pivot point - causes artifacts", 
+			"Polygon\nimage rotation, drawn using scan lines. removes artifacs."
+		];
+
+		var renderMode: int = types.direct;
 
 		///var bobX = mc.bob.x;
 		//var bobY = mc.bob.y;
@@ -44,12 +53,30 @@
 		public function Main() {
 			stage.scaleMode = "noScale";
 			stage.align = "topLeft";
+			//
 			stage.addChild(mc);
+			stage.addChild(txt);
 			texW = monaBd.width;
 			texH = monaBd.height;
 
 			Multitouch.inputMode = MultitouchInputMode.GESTURE;
+			setRenderMode(types.direct);
+			k = new KeyboardCtrl(stage, setRenderMode);
 
+			//stage.addEventListener(TransformGestureEvent.GESTURE_PAN, panObj);
+
+		}
+
+		function setRenderMode(mode:int):void
+		{
+			stage.removeEventListener(Event.ENTER_FRAME, update);
+			stage.removeEventListener(MouseEvent.MOUSE_DOWN, onDown);
+			stage.removeEventListener(MouseEvent.MOUSE_UP, onUp);
+			stage.removeEventListener(TransformGestureEvent.GESTURE_ZOOM, scaleObj);
+			stage.removeEventListener(TransformGestureEvent.GESTURE_ROTATE, rotObj);
+
+
+			renderMode = mode;
 			if (renderMode == types.direct) {
 				directIMG(0, 0);
 			}
@@ -76,14 +103,13 @@
 				stage.addEventListener(MouseEvent.MOUSE_UP, onUp);
 				stage.addEventListener(TransformGestureEvent.GESTURE_ZOOM, scaleObj);
 				stage.addEventListener(TransformGestureEvent.GESTURE_ROTATE, rotObj);
-
 				rotateIMG(0, 0, offsetX, offsetY, scale, rot);
-
 			}
 
-			//stage.addEventListener(TransformGestureEvent.GESTURE_PAN, panObj);
-
+			txt.autoSize = "center";
+			txt.text = texts[mode-1];
 		}
+
 
 		//just draw the source image as is
 		function directIMG(_x: Number, _y: Number): void {
@@ -187,14 +213,15 @@
 			//otherwise our image will move when we click on it
 
 			//get the angle between mouse pos and rotated top left
-			var p1InitialAngle = Math.atan2(mY - new1YPos, mX - new1XPos);
+			var p1CurrAngle = Math.atan2(mY - new1YPos, mX - new1XPos);
 			//get distance between points
 			var p1Magnitude = Math.sqrt((new1XPos - mX) * (new1XPos - mX) + (new1YPos - mY) * (new1YPos - mY));
 			//rotate the point back to origin by subtracting the current global rotation
 			//this is an offest in local coords
-			offsetX = Math.cos(p1InitialAngle - rot) * p1Magnitude;
-			offsetY = Math.sin(p1InitialAngle - rot) * p1Magnitude;
-			//devide by scale to get offset at scale 1
+			var p1InitialAngle = p1CurrAngle - rot;
+			offsetX = Math.cos(p1InitialAngle) * p1Magnitude;
+			offsetY = Math.sin(p1InitialAngle) * p1Magnitude;
+			//divide by scale to get offset at scale 1
 			offsetX /= scale;
 			offsetY /= scale;
 
@@ -273,17 +300,19 @@
 
 			for (var row: Number = 0; row < rows; row++) {
 				var rowPer: Number = row / rows;
+				var currRowsLen:Number = (rows * rowPer);
 				//the pixel at the beginning of this row
-				var sx = new1XPos + cosRowsAngle * (rows * rowPer);
-				var sy = new1YPos + sinRowsAngle * (rows * rowPer);
+				var sx = new1XPos + cosRowsAngle * currRowsLen;
+				var sy = new1YPos + sinRowsAngle * currRowsLen;
 
 
 				for (var col: Number = 0; col < cols; col++) {
 
 					var colPer: Number = col / cols;
+					var currColsLen:Number = (cols * colPer);
 					//the current pixel in this column
-					var px = sx + cosColsAngle * (cols * colPer);
-					var py = sy + sinColsAngle * (cols * colPer);
+					var px = sx + cosColsAngle * currColsLen;
+					var py = sy + sinColsAngle * currColsLen;
 
 					if (px > 0 && px < stage.stageWidth) {
 						if (py > 0 && py < stage.stageHeight) {
@@ -292,9 +321,6 @@
 						}
 						if (px > stage.stageWidth) {
 							break;
-						}
-						if (py > stage.stageHeight) {
-							//break ;//outer;
 						}
 					}
 				}
